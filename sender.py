@@ -2,11 +2,11 @@ import socket
 import time
 
 # Sender IP and port
-sender_ip = "192.168.2.2"
+sender_ip = "192.168.2.3"
 sender_port = 8888
 
 # Receiver IP and port
-receiver_ip = "192.168.2.3"
+receiver_ip = "192.168.2.2"
 receiver_port = 8888
 
 # Create a socket object
