@@ -12,9 +12,11 @@ receiver_socket.bind((receiver_ip, receiver_port))
 
 # Listen for incoming connections
 receiver_socket.listen(1)
+print("Listening for incoming connections.")
 
 # Accept a connection from the sender
 sender_socket, sender_address = receiver_socket.accept()
+print("Connection Accepted.")
 
 while True:
     # Receive data from the sender
