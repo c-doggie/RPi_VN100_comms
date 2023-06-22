@@ -1,4 +1,22 @@
+import socket
 import serial
+import time
+
+# Sender IP and port
+sender_ip = "192.168.2.3"
+sender_port = 8888
+
+# Receiver IP and port
+receiver_ip = "192.168.2.2"
+receiver_port = 8888
+
+# Create a socket object
+sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+try: 
+    sender_socket.connect((receiver_ip, receiver_port))
+    print("Connection to Receiver accepted.")
+except:
+    print("connection to Receiver Denied. Try checking the port and IP Address.")
 
 def parse_attitude_data(data):
     # Example input: "$VNYMR, [yaw_float], [roll_float], [pitch_float],  ..."
@@ -13,7 +31,6 @@ def parse_attitude_data(data):
         yaw_att = float(values[1].strip())
         roll_att = float(values[3].strip())
         pitch_att = float(values[2].strip())
-        
         return yaw_att, roll_att, pitch_att
 
     # Return None if the format doesn't match
@@ -22,18 +39,26 @@ def parse_attitude_data(data):
 # Create a serial port object
 ser = serial.Serial(port = '/dev/serial0', 
                     baudrate=115200,
-                    timeout = 5 #wait 5 seconds before returning recieved bytes
+                    timeout = None #Wait indefinitely for data.
                     )
 
 
+print("Serial port initialized, waiting for data...")
+time.sleep(3)
+
+
 # Read and parse data from the serial port
+
 while True:
     if ser.in_waiting > 0: #data in buffer?
         data = ser.readline().decode() #decode removes any characters before and after data packet
-        attitude_data = parse_attitude_data(data)
+        attitude_data = parse_attitude_data(data) #attitude is a tuple of 3 floats.
         if attitude_data is not None:
             yaw_att, roll_att, pitch_att = attitude_data
             print("yaw: " + str(yaw_att) + ", pitch: " + str(pitch_att) + ", roll: " + str(roll_att))
+            #send attitude data to ground station.
+            sender_socket.send(str(attitude_data).encode())
 
 #close port.
 ser.close()
+sender_socket.close()
