@@ -1,6 +1,7 @@
 import socket
 import serial
 import time
+from sys import exit
 
 # Sender IP and port
 sender_ip = "192.168.2.3"
@@ -15,8 +16,11 @@ sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try: 
     sender_socket.connect((receiver_ip, receiver_port))
     print("Connection to Receiver accepted.")
-except:
-    print("connection to Receiver Denied. Try checking the port and IP Address.")
+except ConnectionRefusedError: #connection denied.
+    print("Connection to Receiver Denied. Try checking if the receiver script is running. \nExiting script.")
+    sender_socket.close()
+    exit()
+
 
 def parse_attitude_data(data):
     # Example input: "$VNYMR, [yaw_float], [roll_float], [pitch_float],  ..."
