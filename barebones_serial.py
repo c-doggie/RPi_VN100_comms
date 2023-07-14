@@ -21,7 +21,7 @@ try:
             timestamps.append(current_time)
             
             # Do something with the received data
-            print("Received:", data.decode().strip())
+            print("Received: " + data.decode().strip())
             
 except KeyboardInterrupt:
     # Program exits on KeyboardInterrupt (e.g., Ctrl+C)

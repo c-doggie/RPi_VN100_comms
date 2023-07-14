@@ -27,18 +27,15 @@ except ConnectionRefusedError: #connection denied.
 
 
 def parse_attitude_data(data):
-    if data.startswith("$VNYPR"):
-        data = data[7:-3]  # Remove "$VNYPR," and "*68" from the string
-        
-        try:
-            yaw_att, pitch_att, roll_att = map(float, data.split(","))
-            return yaw_att, pitch_att, roll_att
-        
-        except ValueError:
-            return None  # Return None if the conversion to floats fails
-    
-    else:
-        return "The configuration of the sensor is not set correctly, please update the configuration with the correct settings (200hz, YPR ADOF)."
+    data = data[:-5].strip() #I have zero clue why it's -5. I think the ascii output of the sensor maybe puts whitespaces after the message? It should be -3 to accocunt for the lat 3 characters.
+    values = data.split(",")
+
+    if len(values) >= 4 and values[0] == "$VNYPR":
+        yaw_att = float(values[1].strip())
+        pitch_att = float(values[2].strip())
+        roll_att  = float(values[3].strip())
+        return yaw_att, pitch_att, roll_att
+    return None
 
 
 # Create a serial port object
@@ -60,8 +57,9 @@ count = 0
 
 while True:
     if ser.in_waiting > 0: #data in buffer?
-        data = ser.readline().decode().strip() #decode removes any characters before and after data packet
+        data = ser.readline().decode() #decode removes any characters before and after data packet
         attitude_data = parse_attitude_data(data) #attitude is a tuple of 3 floats.
+        
         if attitude_data is not None:
             try:
                 #Delta T Calculation Code
@@ -70,14 +68,15 @@ while True:
                 delta_t = current_time - start_time
                 sum_delta_t += delta_t
 
-                yaw_att, roll_att, pitch_att = attitude_data
+                yaw_att, pitch_att, roll_att = attitude_data
                 print("yaw: " + str(yaw_att) + ", pitch: " + str(pitch_att) + ", roll: " + str(roll_att) + ", delta_t: " + str(delta_t))
                 
                 start_time = current_time
 
                 #send attitude data to ground station.
                 sender_socket.send(str(attitude_data).encode())
-            except:
+
+            except BrokenPipeError:
                 print("Some error occured with the receiver connection. Exiting Script.")
 
                 avg_delta_t = sum_delta_t / count
