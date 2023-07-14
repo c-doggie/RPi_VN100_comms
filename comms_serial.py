@@ -4,14 +4,16 @@ import time
 from sys import exit
 
 # Sender IP and port
-sender_ip = "192.168.2.3"
+#sender_ip = "192.168.2.3" # RPi IP if on Belkin Router --> Check router settings for this IP.
+sender_ip = "69.254.48.2" # RPi IP if on LabSwitch Eth Connection. --> Check wired internet settings for this IP.
 sender_port = 8888
 
 # Receiver IP and port
-receiver_ip = "192.168.2.2"
+#receiver_ip = "192.168.2.2" # NUC IP if on Belkin Router --> Check router settings for this IP.
+receiver_ip = "169.254.48.36" # NUC IP if on LabSwitch Eth Connection. --> Check wired internet settings for this IP.
 receiver_port = 8888
 
-# Create a socket object
+# Create a socket object...
 sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try: 
     sender_socket.connect((receiver_ip, receiver_port))
