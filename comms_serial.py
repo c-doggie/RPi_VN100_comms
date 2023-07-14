@@ -5,13 +5,15 @@ from sys import exit
 
 # Sender IP and port
 #sender_ip = "192.168.2.3" # RPi IP if on Belkin Router --> Check router settings for this IP.
-sender_ip = "69.254.48.2" # RPi IP if on LabSwitch Eth Connection. --> Check wired internet settings for this IP.
+sender_ip = "169.254.48.2" # RPi IP if on LabSwitch Eth Connection. --> Check wired internet settings for this IP.
 sender_port = 8888
 
 # Receiver IP and port
 #receiver_ip = "192.168.2.2" # NUC IP if on Belkin Router --> Check router settings for this IP.
 receiver_ip = "169.254.48.36" # NUC IP if on LabSwitch Eth Connection. --> Check wired internet settings for this IP.
 receiver_port = 8888
+
+start_time = time.time_ns()
 
 # Create a socket object...
 sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,22 +27,19 @@ except ConnectionRefusedError: #connection denied.
 
 
 def parse_attitude_data(data):
-    # Example input: "$VNYMR, [yaw_float], [roll_float], [pitch_float],  ..."
-    # Remove leading and trailing whitespaces
-    data = data.strip()
+    if data.startswith("$VNYPR"):
+        data = data[7:-3]  # Remove "$VNYPR," and "*68" from the string
+        
+        try:
+            yaw_att, pitch_att, roll_att = map(float, data.split(","))
+            return yaw_att, pitch_att, roll_att
+        
+        except ValueError:
+            return None  # Return None if the conversion to floats fails
     
-    # Split the string using comma as the delimiter
-    values = data.split(',')
+    else:
+        return "The configuration of the sensor is not set correctly, please update the configuration with the correct settings (200hz, YPR ADOF)."
 
-    if len(values) >= 4 and values[0] == "$VNYMR":
-        # Extract the yaw, roll, and pitch values
-        yaw_att = float(values[1].strip())
-        roll_att = float(values[3].strip())
-        pitch_att = float(values[2].strip())
-        return yaw_att, roll_att, pitch_att
-
-    # Return None if the format doesn't match
-    return None
 
 # Create a serial port object
 ser = serial.Serial(port = '/dev/serial0', 
@@ -54,17 +53,36 @@ time.sleep(3)
 
 
 # Read and parse data from the serial port
+avg_delta_t = 0.0
+sum_delta_t = 0.0
+current_time = 0
+count = 0
 
 while True:
     if ser.in_waiting > 0: #data in buffer?
-        data = ser.readline().decode() #decode removes any characters before and after data packet
+        data = ser.readline().decode().strip() #decode removes any characters before and after data packet
         attitude_data = parse_attitude_data(data) #attitude is a tuple of 3 floats.
         if attitude_data is not None:
-            yaw_att, roll_att, pitch_att = attitude_data
-            print("yaw: " + str(yaw_att) + ", pitch: " + str(pitch_att) + ", roll: " + str(roll_att))
-            #send attitude data to ground station.
-            sender_socket.send(str(attitude_data).encode())
+            try:
+                #Delta T Calculation Code
+                count += 1
+                current_time = time.time_ns()
+                delta_t = current_time - start_time
+                sum_delta_t += delta_t
 
+                yaw_att, roll_att, pitch_att = attitude_data
+                print("yaw: " + str(yaw_att) + ", pitch: " + str(pitch_att) + ", roll: " + str(roll_att) + ", delta_t: " + str(delta_t))
+                
+                start_time = current_time
+
+                #send attitude data to ground station.
+                sender_socket.send(str(attitude_data).encode())
+            except:
+                print("Some error occured with the receiver connection. Exiting Script.")
+
+                avg_delta_t = sum_delta_t / count
+                print("Average delta_t: " + str(avg_delta_t / 10**6) + "ms")
+                exit()
 #close port.
 ser.close()
 sender_socket.close()
