@@ -1,7 +1,7 @@
 import socket
+import struct
 import serial
 import time
-from sys import exit
 
 # Sender IP and port
 #sender_ip = "192.168.2.3" # RPi IP if on Belkin Router --> Check router settings for this IP.
@@ -13,7 +13,7 @@ sender_port = 8888
 receiver_ip = "169.254.48.36" # NUC IP if on LabSwitch Eth Connection. --> Check wired internet settings for this IP.
 receiver_port = 8888
 
-start_time = time.time_ns()
+# start_time = time.time_ns()
 
 # Create a socket object...
 sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -35,8 +35,16 @@ def parse_attitude_data(data):
         pitch_att = float(values[2].strip())
         roll_att  = float(values[3].strip())
         return yaw_att, pitch_att, roll_att
+    
     return None
 
+def send_one_message(sock, attitude_data):
+    #attitude_data is a tuple of 3 floats : attitude_data = (0.0, 0.0, 0.0)
+    attitude_data = struct.pack('!fff', *attitude_data) #Pack a tuple of 3 floats.
+    length = len(attitude_data) 
+    
+    sock.sendall(struct.pack('!I', length))
+    sock.sendall(attitude_data)
 
 # Create a serial port object
 ser = serial.Serial(port = '/dev/serial0', 
@@ -49,12 +57,12 @@ print("Serial port initialized, waiting for data...")
 time.sleep(3)
 
 
-# Read and parse data from the serial port
-avg_delta_t = 0.0
-sum_delta_t = 0.0
-current_time = 0
-count = 0
+# avg_delta_t = 0.0
+# sum_delta_t = 0.0
+# current_time = 0
+# count = 0
 
+# Read and parse data from the serial port
 while True:
     if ser.in_waiting > 0: #data in buffer?
         data = ser.readline().decode() #decode removes any characters before and after data packet
@@ -62,16 +70,16 @@ while True:
         
         if attitude_data is not None:
             try:
-                #Delta T Calculation Code
-                count += 1
-                current_time = time.time_ns()
-                delta_t = current_time - start_time
-                sum_delta_t += delta_t
+                # #Delta T Calculation Code
+                # count += 1
+                # current_time = time.time_ns()
+                # delta_t = current_time - start_time
+                # sum_delta_t += delta_t
 
                 yaw_att, pitch_att, roll_att = attitude_data
-                print("yaw: " + str(yaw_att) + ", pitch: " + str(pitch_att) + ", roll: " + str(roll_att) + ", delta_t: " + str(delta_t))
+                print("yaw: " + str(yaw_att) + ", pitch: " + str(pitch_att) + ", roll: " + str(roll_att)) # + ", delta_t: " + str(delta_t))
                 
-                start_time = current_time
+                # start_time = current_time
 
                 #send attitude data to ground station.
                 sender_socket.send(str(attitude_data).encode())
@@ -79,8 +87,8 @@ while True:
             except BrokenPipeError:
                 print("Some error occured with the receiver connection. Exiting Script.")
 
-                avg_delta_t = sum_delta_t / count
-                print("Average delta_t: " + str(avg_delta_t / 10**6) + "ms")
+                # avg_delta_t = sum_delta_t / count
+                # print("Average delta_t: " + str(avg_delta_t / 10**6) + "ms")
                 exit()
 #close port.
 ser.close()
