@@ -1,5 +1,7 @@
 # RPi to VN100 IMU Sensor
-This is a basic script that enables the Raspberry Pi to communnicate with a Vector Nav VN100 sensor via the Serial UART port. It uses the pyserial library.
+This is a basic script that enables the Raspberry Pi to communicate with a VectorNav VN100 sensor via the Serial UART port. It uses the PySerial library and Socket library. 
+
+It features basic TCP networking code to send the packet to a base station receiver who is awaiting the sensor readings. This code is now deprecated due to my switching from hand-crafted TCP networking to ROS 2-based networking.
 
 Here's a wiring diagram:
 
